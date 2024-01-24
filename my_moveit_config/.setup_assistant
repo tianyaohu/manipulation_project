@@ -1,13 +1,13 @@
 moveit_setup_assistant_config:
   urdf:
     package: ur_description
-    relative_path: urdf/ur.urdf.xacro
+    relative_path: urdf/ur_moveit.urdf.xacro
   srdf:
     relative_path: config/name.srdf
   package_settings:
     author_name: Frank Hu
     author_email: tianyaoh@hotmail.com
-    generated_timestamp: 1706066411
+    generated_timestamp: 1706093704
   control_xacro:
     command:
       - position

@@ -28,4 +28,30 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
+add_executable(pick_and_place
+    src/pick_and_place.cpp)
+target_include_directories(pick_and_place
+    PUBLIC include)
+ament_target_dependencies(pick_and_place
+    ament_cmake
+	rclcpp
+	rclcpp_action
+	moveit_core
+	moveit_ros_planning_interface
+	interactive_markers
+	moveit_ros_planning
+	control_msgs)
+
+# Install the executable
+install(TARGETS 
+	pick_and_place
+    DESTINATION lib/${PROJECT_NAME}
+)
+
+# Install the launch file
+install(DIRECTORY 
+	launch
+    DESTINATION share/${PROJECT_NAME}
+)
+
 ament_package()

@@ -4,7 +4,106 @@
 #include <moveit_msgs/msg/display_robot_state.hpp>
 #include <moveit_msgs/msg/display_trajectory.hpp>
 
+#include <functional>
+#include <geometry_msgs/msg/pose.hpp>
+
 static const rclcpp::Logger LOGGER = rclcpp::get_logger("move_group_demo");
+
+void translate(
+    moveit::planning_interface::MoveGroupInterface &move_group_arm,
+    const float step_size,
+    const std::function<void(geometry_msgs::msg::Pose &)> &modify_pose,
+    const double jump_threshold = 0.0, const double eef_step = 0.01) {
+
+  RCLCPP_INFO(LOGGER, "Moving along specified axis!");
+
+  geometry_msgs::msg::Pose target_pose = move_group_arm.getCurrentPose().pose;
+  modify_pose(target_pose);
+
+  std::vector<geometry_msgs::msg::Pose> waypoints;
+  waypoints.push_back(target_pose);
+
+  moveit_msgs::msg::RobotTrajectory trajectory;
+  double fraction = move_group_arm.computeCartesianPath(
+      waypoints, eef_step, jump_threshold, trajectory);
+
+  move_group_arm.execute(trajectory);
+}
+
+// void translateX(
+//     const moveit::planning_interface::MoveGroupInterface &move_group_arm,
+//     const float step_size, cconst double jump_threshold = 0.0,
+//     const double eef_step = 0.01) {
+//   // Approach
+//   RCLCPP_INFO(LOGGER, "Approach to object!");
+
+//   std::vector<geometry_msgs::msg::Pose> approach_waypoints;
+//   target_pose1.position.X += step_size;
+//   approach_waypoints.push_back(target_pose1);
+
+//   moveit_msgs::msg::RobotTrajectory trajectory_approach;
+//   //   const double jump_threshold = 0.0;
+//   //   const double eef_step = 0.01;
+
+//   double fraction = move_group_arm.computeCartesianPath(
+//       approach_waypoints, eef_step, jump_threshold, trajectory_approach);
+
+//   move_group_arm.execute(trajectory_approach);
+// }
+
+void ui_loop() {
+  char userInput;
+
+  int i = 0;
+
+  std::cout << "doing UI loop " << std::endl;
+
+  while (rclcpp::ok()) {
+    // keep printing ui instruction every 3 commands
+    if (i % 3 == 0) {
+      std::cout << "Enter a direction (k for left, ; for right, o for front, . "
+                   "for back, q to quit): ";
+    }
+    i++;
+
+    // Get User Input
+    std::cin >> userInput;
+
+    if (userInput == 'q') {
+      std::cout << "Exiting the program." << std::endl;
+      break; // exit the while loop if 'q' is entered
+    }
+
+    switch (userInput) {
+    case 'q':
+      std::cout << "Executing pickup" << std::endl;
+      break;
+    case 'k':
+      std::cout << "Left" << std::endl;
+    //   translate(move_group_arm, 0.1, [](geometry_msgs::msg::Pose &pose) {
+    //     pose.position.x += 0.1; // Modify the X coordinate
+    //   });
+    case ';':
+      std::cout << "Right" << std::endl;
+    //   translate(move_group_arm, 0.1, [](geometry_msgs::msg::Pose &pose) {
+    //     pose.position.x -= 0.1; // Modify the X coordinate
+    //   });
+    case 'o':
+      std::cout << "Front" << std::endl;
+      // Example usage for translating along Y axis
+    //   translate(move_group_arm, 0.1, [](geometry_msgs::msg::Pose &pose) {
+    //     pose.position.y += 0.1; // Modify the Y coordinate
+    //   });
+    case '.':
+      std::cout << "Back" << std::endl;
+    //   translate(move_group_arm, 0.1, [](geometry_msgs::msg::Pose &pose) {
+    //     pose.position.y -= 0.1; // Modify the Y coordinate
+    //   });
+    default:
+      std::cout << "Invalid input" << std::endl;
+    }
+  }
+}
 
 int main(int argc, char **argv) {
   rclcpp::init(argc, argv);
@@ -95,6 +194,11 @@ int main(int argc, char **argv) {
                  moveit::core::MoveItErrorCode::SUCCESS);
 
   move_group_arm.execute(my_plan_arm);
+
+  // ########### END OF PREGRASP ############
+
+  // trying UI LOOP
+  ui_loop();
 
   // Open Gripper
 

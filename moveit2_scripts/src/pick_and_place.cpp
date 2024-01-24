@@ -177,7 +177,7 @@ int main(int argc, char **argv) {
   target_pose1.orientation.z = 0.00;
   target_pose1.orientation.w = 0.00;
   target_pose1.position.x = 0.343;
-  target_pose1.position.y = -0.025;
+  target_pose1.position.y = 0.132;
   target_pose1.position.z = 0.264;
 
   //   target_pose1.orientation.x = 1.570;
@@ -215,10 +215,10 @@ int main(int argc, char **argv) {
   RCLCPP_INFO(LOGGER, "Approach to object!");
 
   std::vector<geometry_msgs::msg::Pose> approach_waypoints;
-  target_pose1.position.z -= 0.04;
+  target_pose1.position.z -= 0.02;
   approach_waypoints.push_back(target_pose1);
 
-  target_pose1.position.z -= 0.04;
+  target_pose1.position.z -= 0.02;
   approach_waypoints.push_back(target_pose1);
 
   moveit_msgs::msg::RobotTrajectory trajectory_approach;
@@ -267,7 +267,7 @@ int main(int argc, char **argv) {
   current_state_arm->copyJointGroupPositions(joint_model_group_arm,
                                              joint_group_positions_arm);
 
-  joint_group_positions_arm[0] = -3.13; // Shoulder Pan
+  joint_group_positions_arm[0] = 1.5; // Shoulder Pan
 
   move_group_arm.setJointValueTarget(joint_group_positions_arm);
 
@@ -286,6 +286,23 @@ int main(int argc, char **argv) {
                      moveit::core::MoveItErrorCode::SUCCESS);
 
   move_group_gripper.execute(my_plan_gripper);
+
+  // Go Home
+  RCLCPP_INFO(LOGGER, "Going Home");
+
+  joint_group_positions_arm[0] = 0.00;  // Shoulder Pan
+  joint_group_positions_arm[1] = -2.50; // Shoulder Lift
+  joint_group_positions_arm[2] = 1.50;  // Elbow
+  joint_group_positions_arm[3] = -1.50; // Wrist 1
+  joint_group_positions_arm[4] = -1.55; // Wrist 2
+  joint_group_positions_arm[5] = 0.00;  // Wrist 3
+
+  //   move_group_gripper.setNamedTarget("home");
+
+  move_group_arm.setJointValueTarget(joint_group_positions_arm);
+
+  success_arm = (move_group_arm.plan(my_plan_arm) ==
+                 moveit::core::MoveItErrorCode::SUCCESS);
 
   rclcpp::shutdown();
   return 0;

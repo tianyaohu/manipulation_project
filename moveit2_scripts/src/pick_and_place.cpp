@@ -202,7 +202,7 @@ int main(int argc, char **argv) {
   target_pose1.orientation.z = 0.00;
   target_pose1.orientation.w = 0.00;
   target_pose1.position.x = 0.343;
-  target_pose1.position.y = 0.132;
+  target_pose1.position.y = -0.02;
   target_pose1.position.z = 0.264;
 
   move_group_arm.setPoseTarget(target_pose1);
@@ -231,7 +231,7 @@ int main(int argc, char **argv) {
   // Approach
   approachToObject(move_group_arm, target_pose1,
                    [](geometry_msgs::msg::Pose &pose) {
-                     pose.position.z -= 0.04; // Modify the Z coordinate
+                     pose.position.z -= 0.05; // Modify the Z coordinate
                    });
 
   // Close Gripper
@@ -251,7 +251,7 @@ int main(int argc, char **argv) {
                    [](geometry_msgs::msg::Pose &pose) {
                      pose.position.z += 0.04; // Modify the Z coordinate
                    });
-  // Place
+  // Panning 180
 
   RCLCPP_INFO(LOGGER, "Rotating Arm");
 
@@ -259,7 +259,7 @@ int main(int argc, char **argv) {
   current_state_arm->copyJointGroupPositions(joint_model_group_arm,
                                              joint_group_positions_arm);
 
-  joint_group_positions_arm[0] = 1.5; // Shoulder Pan
+  joint_group_positions_arm[0] = -3.13; // Shoulder Pan
 
   move_group_arm.setJointValueTarget(joint_group_positions_arm);
 
@@ -268,29 +268,16 @@ int main(int argc, char **argv) {
 
   move_group_arm.execute(my_plan_arm);
 
-  // Approach
-  approachToObject(move_group_arm, target_pose1,
-                   [](geometry_msgs::msg::Pose &pose) {
-                     pose.position.z -= 0.04; // Modify the Z coordinate
-                   });
+  // Open Gripper
 
-  // Close Gripper
+  RCLCPP_INFO(LOGGER, "Open Gripper!");
 
-  RCLCPP_INFO(LOGGER, "Close Gripper!");
-
-  move_group_gripper.setNamedTarget("gripper_close");
+  move_group_gripper.setNamedTarget("gripper_open");
 
   success_gripper = (move_group_gripper.plan(my_plan_gripper) ==
                      moveit::core::MoveItErrorCode::SUCCESS);
 
   move_group_gripper.execute(my_plan_gripper);
-
-  // Retreat
-
-  approachToObject(move_group_arm, target_pose1,
-                   [](geometry_msgs::msg::Pose &pose) {
-                     pose.position.z += 0.04; // Modify the Z coordinate
-                   });
 
   // Go Home
   RCLCPP_INFO(LOGGER, "Going Home");

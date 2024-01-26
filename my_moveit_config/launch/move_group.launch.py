@@ -7,6 +7,8 @@ from launch_ros.actions import Node
 def generate_launch_description():
     moveit_config = MoveItConfigsBuilder("name", package_name="my_moveit_config").to_moveit_configs()
     
+    print("Starting my_movit_config move_group node, this launch file is for SIMULATION.")
+
     # Move Group Node
     move_group_node = Node(
         package="moveit_ros_move_group",

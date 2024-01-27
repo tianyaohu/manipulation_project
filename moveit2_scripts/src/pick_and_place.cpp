@@ -8,8 +8,22 @@
 #include <geometry_msgs/msg/pose.hpp>
 
 #include <cmath>
+#include <random>
 
 static const rclcpp::Logger LOGGER = rclcpp::get_logger("move_group_demo");
+
+// Function to generate a random number in the specified range
+double getRandomNumber(double rangeMin, double rangeMax) {
+  // Set up a random number generator
+  std::random_device rd;
+  std::mt19937 gen(rd());
+
+  // Define the range
+  std::uniform_real_distribution<double> distribution(rangeMin, rangeMax);
+
+  // Generate a random number
+  return distribution(gen);
+}
 
 void ui_loop() {
   char userInput;
@@ -67,19 +81,22 @@ void ui_loop() {
 
 void translate_ee(
     moveit::planning_interface::MoveGroupInterface &move_group_arm,
-    geometry_msgs::msg::Pose &target_pose,
+    int num_step,
     const std::function<void(geometry_msgs::msg::Pose &)> &modify_pose,
     const double jump_threshold = 0.0, const double eef_step = 0.01) {
 
-  RCLCPP_INFO(LOGGER, "Approach to object!");
+  RCLCPP_INFO(LOGGER, "Translating End Effector!");
 
+  // get target pose
+  geometry_msgs::msg::Pose target_pose = move_group_arm.getCurrentPose().pose;
+
+  // init and define way points
   std::vector<geometry_msgs::msg::Pose> approach_waypoints;
 
-  modify_pose(target_pose); // Use the lambda to modify the pose
-  approach_waypoints.push_back(target_pose);
-
-  modify_pose(target_pose); // Use the lambda again if needed
-  approach_waypoints.push_back(target_pose);
+  for (int i = 0; i < num_step; i++) {
+    modify_pose(target_pose); // Use the lambda to modify the pose
+    approach_waypoints.push_back(target_pose);
+  }
 
   moveit_msgs::msg::RobotTrajectory trajectory_approach;
 
@@ -98,14 +115,17 @@ float calc_gripper_value(float distance) {
   return value;
 }
 
-void close_gripper(
+bool close_gripper(
     moveit::planning_interface::MoveGroupInterface &move_group_gripper,
-    moveit::planning_interface::MoveGroupInterface::Plan &my_plan_gripper,
     float length) {
-  RCLCPP_INFO(LOGGER, "Close Gripper!");
+  RCLCPP_INFO(LOGGER, "Close Gripper! with value %f", length);
 
   std::vector<double> joint_group_positions_gripper =
       move_group_gripper.getCurrentJointValues();
+
+  // clear
+//   joint_group_positions_gripper.clear();
+
   // set gripper value
   joint_group_positions_gripper[2] = calc_gripper_value(
       length); // Adjust the index based on your gripper joints
@@ -113,10 +133,47 @@ void close_gripper(
   // set gripper
   move_group_gripper.setJointValueTarget(joint_group_positions_gripper);
 
-  bool gripper_success = (move_group_gripper.plan(my_plan_gripper) ==
+  // Plan and execute the motion
+  moveit::planning_interface::MoveGroupInterface::Plan my_plan;       
+
+  bool gripper_success = (move_group_gripper.plan(my_plan) ==
+                          moveit::core::MoveItErrorCode::SUCCESS);
+
+  move_group_gripper.execute(my_plan);
+
+  return gripper_success;
+}
+
+bool step_close_gripper(    
+    moveit::planning_interface::MoveGroupInterface &move_group_gripper,
+    float value){
+
+    float RATIO_TOLERANCE = 1.2;
+
+    bool result = true;
+
+    for (int i = 3; i >= 0; i --){
+        result = result && close_gripper(move_group_gripper, std::pow(RATIO_TOLERANCE, i) * value);
+        // Sleep for 100 milliseconds
+        rclcpp::sleep_for(std::chrono::milliseconds(300));
+    }
+    return result;
+}
+
+bool set_gripper_state(
+    moveit::planning_interface::MoveGroupInterface &move_group_gripper,
+    moveit::planning_interface::MoveGroupInterface::Plan &my_plan_gripper,
+    const char *gripper_state = "gripper_open") {
+  RCLCPP_INFO(LOGGER, "Open Gripper!");
+
+  move_group_gripper.setNamedTarget(gripper_state);
+
+  bool success_gripper = (move_group_gripper.plan(my_plan_gripper) ==
                           moveit::core::MoveItErrorCode::SUCCESS);
 
   move_group_gripper.execute(my_plan_gripper);
+
+  return success_gripper;
 }
 
 int main(int argc, char **argv) {
@@ -164,8 +221,7 @@ int main(int argc, char **argv) {
   moveit::planning_interface::MoveGroupInterface::Plan my_plan_gripper;
 
   // sim object length (square)
-  //   float SIM_OBJ_LENGTH = 0.0170;
-  float SIM_OBJ_LENGTH = 0.02;
+  float SIM_OBJ_LENGTH = 0.0205;
 
   // Go Home
   RCLCPP_INFO(LOGGER, "Going Home");
@@ -205,54 +261,44 @@ int main(int argc, char **argv) {
 
   // ########### END OF PREGRASP ############
 
-  //   // trying UI LOOP
-  //   ui_loop();
-
   // Open Gripper
+  set_gripper_state(move_group_gripper, my_plan_gripper, "gripper_open");
 
-  RCLCPP_INFO(LOGGER, "Open Gripper!");
-
-  move_group_gripper.setNamedTarget("gripper_open");
-
-  bool success_gripper = (move_group_gripper.plan(my_plan_gripper) ==
-                          moveit::core::MoveItErrorCode::SUCCESS);
-
-  move_group_gripper.execute(my_plan_gripper);
+  // DEFININING APPROACHING AMOUNT
+  float APPROACH_DIST = 0.045;
 
   // Approach
-  translate_ee(move_group_arm, target_pose1,
-               [](geometry_msgs::msg::Pose &pose) {
-                 pose.position.z -= 0.05; // Modify the Z coordinate
+  translate_ee(move_group_arm, 2,
+               [APPROACH_DIST](geometry_msgs::msg::Pose &pose) {
+                 pose.position.z -= APPROACH_DIST; // reach down
                });
 
-  // Close Gripper
-
-  //   RCLCPP_INFO(LOGGER, "Close Gripper!");
-
-  //   move_group_gripper.setNamedTarget("gripper_close");
-
-  //   success_gripper = (move_group_gripper.plan(my_plan_gripper) ==
-  //                      moveit::core::MoveItErrorCode::SUCCESS);
-
-  //   move_group_gripper.execute(my_plan_gripper);
-
-  close_gripper(move_group_gripper, my_plan_gripper, SIM_OBJ_LENGTH);
+  //   Close Gripper
+//   close_gripper(move_group_gripper, SIM_OBJ_LENGTH);
+//   set_gripper_state(move_group_gripper, "gripper_close");
+  step_close_gripper(move_group_gripper,SIM_OBJ_LENGTH);
 
   // Retreat
-
-  translate_ee(move_group_arm, target_pose1,
-               [](geometry_msgs::msg::Pose &pose) {
-                 pose.position.z += 0.04; // Modify the Z coordinate
+  translate_ee(move_group_arm, 2,
+               [APPROACH_DIST](geometry_msgs::msg::Pose &pose) {
+                 pose.position.z += APPROACH_DIST; // lift up
                });
-  // Panning 180
 
+  float CLEARANCE = 0.03;
+
+  // CLEARANCE Retreat
+  translate_ee(move_group_arm, 2, [CLEARANCE](geometry_msgs::msg::Pose &pose) {
+    pose.position.z += CLEARANCE; // lift up
+  });
+
+  // Panning 180ish degrees
   RCLCPP_INFO(LOGGER, "Rotating Arm");
 
   current_state_arm = move_group_arm.getCurrentState(10);
   current_state_arm->copyJointGroupPositions(joint_model_group_arm,
                                              joint_group_positions_arm);
 
-  joint_group_positions_arm[0] += M_PI; // Shoulder Pan
+  joint_group_positions_arm[0] += M_PI ; // Shoulder Pan
 
   std::cout << "joint_group_positions_arm[0]: " << joint_group_positions_arm[0]
             << std::endl;
@@ -264,16 +310,26 @@ int main(int argc, char **argv) {
 
   move_group_arm.execute(my_plan_arm);
 
+  // Approach CLEARANCE
+  translate_ee(move_group_arm, 2, [CLEARANCE](geometry_msgs::msg::Pose &pose) {
+    pose.position.z -= CLEARANCE; // reach down
+  });
+
+  // Approach
+  translate_ee(move_group_arm, 2,
+               [APPROACH_DIST](geometry_msgs::msg::Pose &pose) {
+                 pose.position.z -= APPROACH_DIST; // reach down
+               });
+
   // Open Gripper
+  set_gripper_state(move_group_gripper, my_plan_gripper, "gripper_open");
 
-  RCLCPP_INFO(LOGGER, "Open Gripper!");
+  // Retreat
 
-  move_group_gripper.setNamedTarget("gripper_open");
-
-  success_gripper = (move_group_gripper.plan(my_plan_gripper) ==
-                     moveit::core::MoveItErrorCode::SUCCESS);
-
-  move_group_gripper.execute(my_plan_gripper);
+  translate_ee(move_group_arm, 2,
+               [APPROACH_DIST](geometry_msgs::msg::Pose &pose) {
+                 pose.position.z += APPROACH_DIST; // lift
+               });
 
   // Go Home
   RCLCPP_INFO(LOGGER, "Going Home");

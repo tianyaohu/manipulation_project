@@ -30,8 +30,8 @@ ros2 launch ur3e_helper_scripts setup_grasp_object.launch.py use_sim_time:=True 
 # ~~~~~~~~~~~~~~~~~~~~~~ #
 
 # ~~~~~ Real Robot ~~~~~ #
-ros2 launch real_ur3e_config move_group.launch.py
-ros2 launch real_ur3e_config moveit_rviz.launch.py
+ros2 launch real_moveit_config move_group.launch.py
+ros2 launch real_moveit_config moveit_rviz.launch.py
 
 ros2 launch ur3e_helper_scripts display_current_pose.launch.py use_sim_time:=False
 ros2 launch ur3e_helper_scripts reset_grasp_object.launch.py use_sim_time:=False x:=0.150 y:=0.250 z:=0.200

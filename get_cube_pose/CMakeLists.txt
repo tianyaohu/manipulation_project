@@ -23,4 +23,26 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
+add_executable(get_pose_client
+    src/get_pose_client.cpp)
+target_include_directories(get_pose_client
+    PUBLIC include)
+ament_target_dependencies(get_pose_client
+    ament_cmake
+	rclcpp
+	rclcpp_action
+	grasping_msgs)
+
+# Install the executable
+install(TARGETS 
+	get_pose_client
+    DESTINATION lib/${PROJECT_NAME}
+)
+
+# Install the launch file
+install(DIRECTORY 
+	launch
+    DESTINATION share/${PROJECT_NAME}
+)
+
 ament_package()

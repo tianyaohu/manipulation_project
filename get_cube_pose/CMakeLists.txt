@@ -23,6 +23,10 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
+#include
+include_directories(include)
+
+############ get cube pose client ########
 add_executable(get_pose_client
     src/get_pose_client.cpp)
 target_include_directories(get_pose_client
@@ -44,5 +48,32 @@ install(DIRECTORY
 	launch
     DESTINATION share/${PROJECT_NAME}
 )
+
+install(
+  DIRECTORY include/
+  DESTINATION include
+)
+
+######### Make Library #########
+add_library(get_cube_pose SHARED
+  src/get_pose_client.cpp
+)
+ament_target_dependencies(get_cube_pose
+    ament_cmake
+	rclcpp
+	rclcpp_action
+	grasping_msgs)
+
+
+install(TARGETS get_cube_pose
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
+ament_export_include_directories(include)
+ament_export_libraries(get_cube_pose)
+
+######### End of Make Library #########
 
 ament_package()

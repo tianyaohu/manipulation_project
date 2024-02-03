@@ -10,6 +10,11 @@
 #include <cmath>
 #include <random>
 
+// get pose
+#include "get_cube_pose/get_pose_client.hpp"
+#include "rclcpp/executors.hpp"
+#include "rclcpp/utilities.hpp"
+
 static const rclcpp::Logger LOGGER = rclcpp::get_logger("move_group_demo");
 
 // Function to generate a random number in the specified range
@@ -23,60 +28,6 @@ double getRandomNumber(double rangeMin, double rangeMax) {
 
   // Generate a random number
   return distribution(gen);
-}
-
-void ui_loop() {
-  char userInput;
-
-  int i = 0;
-
-  std::cout << "doing UI loop " << std::endl;
-
-  while (rclcpp::ok()) {
-    // keep printing ui instruction every 3 commands
-    if (i % 3 == 0) {
-      std::cout << "Enter a direction (k for left, ; for right, o for front, . "
-                   "for back, q to quit): ";
-    }
-    i++;
-
-    // Get User Input
-    std::cin >> userInput;
-
-    if (userInput == 'q') {
-      std::cout << "Exiting the program." << std::endl;
-      break; // exit the while loop if 'q' is entered
-    }
-
-    switch (userInput) {
-    case 'q':
-      std::cout << "Executing pickup" << std::endl;
-      break;
-    case 'k':
-      std::cout << "Left" << std::endl;
-    //   translate(move_group_arm, 0.1, [](geometry_msgs::msg::Pose &pose) {
-    //     pose.position.x += 0.1; // Modify the X coordinate
-    //   });
-    case ';':
-      std::cout << "Right" << std::endl;
-    //   translate(move_group_arm, 0.1, [](geometry_msgs::msg::Pose &pose) {
-    //     pose.position.x -= 0.1; // Modify the X coordinate
-    //   });
-    case 'o':
-      std::cout << "Front" << std::endl;
-      // Example usage for translating along Y axis
-    //   translate(move_group_arm, 0.1, [](geometry_msgs::msg::Pose &pose) {
-    //     pose.position.y += 0.1; // Modify the Y coordinate
-    //   });
-    case '.':
-      std::cout << "Back" << std::endl;
-    //   translate(move_group_arm, 0.1, [](geometry_msgs::msg::Pose &pose) {
-    //     pose.position.y -= 0.1; // Modify the Y coordinate
-    //   });
-    default:
-      std::cout << "Invalid input" << std::endl;
-    }
-  }
 }
 
 void translate_ee(
@@ -178,15 +129,50 @@ bool set_gripper_state(
 }
 
 int main(int argc, char **argv) {
+  // init ros node settings
   rclcpp::init(argc, argv);
   rclcpp::NodeOptions node_options;
   node_options.automatically_declare_parameters_from_overrides(true);
   auto move_group_node =
       rclcpp::Node::make_shared("move_group_interface_tutorial", node_options);
 
+  // init move_group_node
   rclcpp::executors::SingleThreadedExecutor executor;
   executor.add_node(move_group_node);
   std::thread([&executor]() { executor.spin(); }).detach();
+
+  // #################### GET PERCEPTION CUBE POSE ######################
+  // init cube pose client
+  auto cube_pose_client = std::make_shared<FindObjectsClient>();
+
+  while (!cube_pose_client->is_goal_done()) {
+    rclcpp::spin_some(cube_pose_client);
+  }
+
+  // init grip pos vars
+  float grip_pos_x, grip_pos_y;
+
+  // check if goal was successful
+  if (cube_pose_client->was_goal_successful()) {
+    float *cube_pose = cube_pose_client->get_last_pos();
+
+    // settting grip pos
+    grip_pos_x = cube_pose[0];
+    grip_pos_y = cube_pose[1];
+
+    // printing cube pose for visual confirmation.
+    std::cout << "Cube pose request is successful. Ready for grasping "
+              << std::endl;
+    // print pose for visual confirmation
+    std::cout << "last_pos_x : " << grip_pos_x << std::endl;
+    std::cout << "last_pos_y : " << grip_pos_y << std::endl;
+
+  } else {
+    std::cout << "Cube pose request FAILED. Exiting execution. " << std::endl;
+    // exit execution
+    return 1; // 0 is successful, others are errror codes
+  }
+  // #################### END OF GET PERCEPTION CUBE POSE ######################
 
   static const std::string PLANNING_GROUP_ARM = "arm_manipulator";
   static const std::string PLANNING_GROUP_GRIPPER = "gripper";
@@ -232,7 +218,7 @@ int main(int argc, char **argv) {
   joint_group_positions_arm[2] = 1.50;  // Elbow
   joint_group_positions_arm[3] = -1.50; // Wrist 1
   joint_group_positions_arm[4] = -1.55; // Wrist 2
-  joint_group_positions_arm[5] = 0.00;  // Wrist 3
+  joint_group_positions_arm[5] = 1.55;  // Wrist 3
 
   move_group_arm.setJointValueTarget(joint_group_positions_arm);
 
@@ -241,7 +227,9 @@ int main(int argc, char **argv) {
 
   move_group_arm.execute(my_plan_arm);
 
-  // Pregrasp
+  set_gripper_state(move_group_gripper, my_plan_gripper, "gripper_open");
+
+  //################ Pregrasp ####################
   RCLCPP_INFO(LOGGER, "Pregrasp Position");
 
   geometry_msgs::msg::Pose target_pose1;
@@ -249,8 +237,8 @@ int main(int argc, char **argv) {
   target_pose1.orientation.y = 0.00;
   target_pose1.orientation.z = 0.00;
   target_pose1.orientation.w = 0.00;
-  target_pose1.position.x = 0.3279;
-  target_pose1.position.y = -0.01078;
+  target_pose1.position.x = grip_pos_x;
+  target_pose1.position.y = grip_pos_y;
   target_pose1.position.z = 0.264;
 
   move_group_arm.setPoseTarget(target_pose1);
@@ -274,9 +262,10 @@ int main(int argc, char **argv) {
                  pose.position.z -= APPROACH_DIST; // reach down
                });
 
+  // Open Gripper
+  set_gripper_state(move_group_gripper, my_plan_gripper, "gripper_open");
+
   //   Close Gripper
-  //   close_gripper(move_group_gripper, SIM_OBJ_LENGTH);
-  //   set_gripper_state(move_group_gripper, "gripper_close");
   step_close_gripper(move_group_gripper, SIM_OBJ_LENGTH);
 
   // Retreat

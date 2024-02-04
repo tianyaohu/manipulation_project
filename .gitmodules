@@ -1,0 +1,3 @@
+[submodule "simple_grasping_ros2"]
+	path = simple_grasping_ros2
+	url = ./simple_grasping_ros2/

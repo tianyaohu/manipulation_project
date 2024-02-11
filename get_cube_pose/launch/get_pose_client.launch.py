@@ -9,6 +9,8 @@ from ament_index_python.packages import get_package_share_directory
 def generate_launch_description():
     rviz_config_dir = os.path.join(get_package_share_directory('get_cube_pose'), 'rviz_config', 'launch_part.rviz')
 
+    print(f"TTTTTTTTTTTTTTTTTTT {get_package_share_directory('get_cube_pose'), 'rviz_config', 'launch_part.rviz'}")
+
     return LaunchDescription([
         DeclareLaunchArgument(
             'use_sim_time',

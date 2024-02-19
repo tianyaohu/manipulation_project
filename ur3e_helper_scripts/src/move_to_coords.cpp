@@ -12,7 +12,7 @@
 
 // program variables
 static const rclcpp::Logger LOGGER = rclcpp::get_logger("move_group_demo");
-static const std::string PLANNING_GROUP_UR3_ARM = "ur3_manipulator";
+static const std::string PLANNING_GROUP_UR3_ARM = "arm_manipulator";
 
 class MoveToCoords {
 

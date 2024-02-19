@@ -2,15 +2,12 @@ import os
 from launch_ros.actions import Node
 
 from launch import LaunchDescription
-from launch.substitutions import LaunchConfiguration, TextSubstitution
+from launch.substitutions import LaunchConfiguration
 from launch.actions import DeclareLaunchArgument
 from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
     rviz_config_dir = os.path.join(get_package_share_directory('get_cube_pose'), 'rviz_config', 'launch_part.rviz')
-
-    #add launch argument for point cloud topic
-
 
     return LaunchDescription([
         DeclareLaunchArgument(

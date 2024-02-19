@@ -2,7 +2,6 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from moveit_configs_utils import MoveItConfigsBuilder
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import TextSubstitution
 from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
@@ -15,12 +14,21 @@ def generate_launch_description():
             description='\'True\' if using simulation, else \'False\''
         ),
 
+        DeclareLaunchArgument(
+            'pointcloud_topic',
+            default_value='/wrist_rgbd_depth_sensor/points', 
+            description='PointCloud2 topic for \'simple_grasp\' pkg to get info from.'
+        ),
+
         Node(
             package='simple_grasping',
             executable='basic_grasping_perception_node',
             name='basic_grasping_perception_node',
             output='screen',
-            parameters=[{'debug_topics': True}],
+            parameters=[
+                {'debug_topics': True},
+                {'pointcloud_topic': LaunchConfiguration('pointcloud_topic')},
+                ],
         ),
 
         Node(

@@ -239,8 +239,8 @@ int main(int argc, char **argv) {
   target_pose1.orientation.y = 0.00;
   target_pose1.orientation.z = 0.00;
   target_pose1.orientation.w = 0.00;
-  target_pose1.position.x = grip_pos_x;
-  target_pose1.position.y = grip_pos_y;
+  target_pose1.position.x = grip_pos_x - 0.025;
+  target_pose1.position.y = grip_pos_y - 0.025;
   target_pose1.position.z = 0.254;
 
   move_group_arm.setPoseTarget(target_pose1);
@@ -256,7 +256,7 @@ int main(int argc, char **argv) {
   set_gripper_state(move_group_gripper, my_plan_gripper, "gripper_open");
 
   // DEFININING APPROACHING AMOUNT
-  float APPROACH_DIST = 0.02;
+  float APPROACH_DIST = 0.025;
 
   // Approach
   translate_ee(move_group_arm, 2,
